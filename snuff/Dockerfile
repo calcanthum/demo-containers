@@ -20,6 +20,5 @@ RUN echo "extension=snuffleupagus.so" > /usr/local/etc/php/conf.d/20-snuffleupag
     && echo "sp.configuration_file=/usr/local/etc/php/conf.d/snuffleupagus.rules" >> /usr/local/etc/php/conf.d/20-snuffleupagus.ini
 
 COPY snuffleupagus.rules /usr/local/etc/php/conf.d/snuffleupagus.rules
-COPY checklist/ /var/www/html/
 
 RUN chown -R www-data:www-data /var/www/html/
