@@ -2,7 +2,6 @@
 setcookie("testCookie", "testValue", [
     'expires' => time() + 3600,
     'path' => '/',
-    'secure' => true, 
     'httponly' => true,
     'samesite' => 'Lax' // Explicitly set for demonstration, Snuffleupagus should enforce this
 ]);
