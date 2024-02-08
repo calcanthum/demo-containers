@@ -1,59 +1,100 @@
+# Enable hardening of the PHP random number generator
 sp.harden_random.enable();
 
+# Enable protection against XML External Entity (XXE) attacks if the XML extension is loaded
 @condition extension_loaded("xml");
 sp.xxe_protection.enable();
 @end_condition;
 
+# Configure the SameSite attribute for the PHPSESSID cookie to 'Lax'
 sp.cookie.name("PHPSESSID").samesite("lax");
 
+# Disable chmod function calls with mode 0666 (octal 438)
 sp.disable_function.function("chmod").param("mode").value("438").drop();
+
+# Disable chmod function calls with mode 0777 (octal 511)
 sp.disable_function.function("chmod").param("mode").value("511").drop();
+
+# Disable the mail function if it contains any dash-prefixed command-line options
 sp.disable_function.function("mail").param("additional_parameters").value_r("\\-").drop();
-sp.disable_function.function("putenv").param("setting").value_r("LD_").drop()
-sp.disable_function.function("putenv").param("setting").value("PATH").drop()
-sp.disable_function.function("putenv").param("setting").value_r("GCONV_").drop()
-sp.disable_function.function("extract").pos("0").value_r("^_").drop()
-sp.disable_function.function("extract").pos("1").value("0").drop()
-sp.disable_function.function("ini_set").param("varname").value_r("open_basedir").drop()
+
+# Block putenv calls that attempt to set LD_* environment variables
+sp.disable_function.function("putenv").param("setting").value_r("LD_").drop();
+
+# Prevent modification of the PATH environment variable
+sp.disable_function.function("putenv").param("setting").value("PATH").drop();
+
+# Block putenv calls that attempt to set GCONV_* environment variables
+sp.disable_function.function("putenv").param("setting").value_r("GCONV_").drop();
+
+# Prevent the extract function from extracting variables prefixed with an underscore
+sp.disable_function.function("extract").pos("0").value_r("^_").drop();
+
+# Disable the extract function from overwriting global variables
+sp.disable_function.function("extract").pos("1").value("0").drop();
+
+# Block ini_set calls that attempt to change the open_basedir configuration
+sp.disable_function.function("ini_set").param("varname").value_r("open_basedir").drop();
+
+# Allow including/requiring PHP, inc, and phtml files
 sp.disable_function.function("require_once").value_r("\.(inc|phtml|php)$").allow();
 sp.disable_function.function("include_once").value_r("\.(inc|phtml|php)$").allow();
 sp.disable_function.function("require").value_r("\.(inc|phtml|php)$").allow();
 sp.disable_function.function("include").value_r("\.(inc|phtml|php)$").allow();
-sp.disable_function.function("require_once").drop()
-sp.disable_function.function("include_once").drop()
-sp.disable_function.function("require").drop()
-sp.disable_function.function("include").drop()
+
+# Disallow dynamic including/requiring of files without explicit permission
+sp.disable_function.function("require_once").drop();
+sp.disable_function.function("include_once").drop();
+sp.disable_function.function("require").drop();
+sp.disable_function.function("include").drop();
+
+# Block system, shell_exec, exec, and proc_open calls with potentially malicious character patterns
 sp.disable_function.function("system").param("command").value_r("[$|;&`\\n\\(\\)\\\\]").drop();
 sp.disable_function.function("shell_exec").pos("0").value_r("[$|;&`\\n\\(\\)\\\\]").drop();
 sp.disable_function.function("exec").param("command").value_r("[$|;&`\\n\\(\\)\\\\]").drop();
 sp.disable_function.function("proc_open").param("command").value_r("[$|;&`\\n\\(\\)\\\\]").drop();
+
+# Prevent ini_set calls from modifying critical PHP assertion and memory limit settings
 sp.disable_function.function("ini_set").param("varname").value("assert.active").drop();
 sp.disable_function.function("ini_set").param("varname").value("zend.assertions").drop();
 sp.disable_function.function("ini_set").param("varname").value("memory_limit").drop();
 sp.disable_function.function("ini_set").param("varname").value("include_path").drop();
 sp.disable_function.function("ini_set").param("varname").value("open_basedir").drop();
+
+# Block retrieval of sensitive PHP settings via ini_get
 sp.disable_function.function("ini_get").param("varname").value("allow_url_fopen").drop();
 sp.disable_function.function("ini_get").param("varname").value("open_basedir").drop();
 sp.disable_function.function("ini_get").param("varname").value_r("suhosin").drop();
+
+# Disallow checks for dangerous functions using function_exists
 sp.disable_function.function("function_exists").param("function_name").value("eval").drop();
 sp.disable_function.function("function_exists").param("function_name").value("exec").drop();
 sp.disable_function.function("function_exists").param("function_name").value("system").drop();
 sp.disable_function.function("function_exists").param("function_name").value("shell_exec").drop();
 sp.disable_function.function("function_exists").param("function_name").value("proc_open").drop();
 sp.disable_function.function("function_exists").param("function_name").value("passthru").drop();
+
+# Block checks for callability of dangerous functions using is_callable
 sp.disable_function.function("is_callable").param("var").value("eval").drop();
 sp.disable_function.function("is_callable").param("var").value("exec").drop();
 sp.disable_function.function("is_callable").param("var").value("system").drop();
 sp.disable_function.function("is_callable").param("var").value("shell_exec").drop();
 sp.disable_function.function("is_callable").param("var").value("proc_open").drop();
 sp.disable_function.function("is_callable").param("var").value("passthru").drop();
+
+# Allow specific cURL options
 sp.disable_function.function("curl_setopt").param("value").value("1").allow();
 sp.disable_function.function("curl_setopt").param("value").value("2").allow();
+
+# Enforce SSL verification in cURL requests
 sp.disable_function.function("curl_setopt").param("option").value("64").drop().alias("Please don't turn CURLOPT_SSL_VERIFYCLIENT off.");
 sp.disable_function.function("curl_setopt").param("option").value("81").drop().alias("Please don't turn CURLOPT_SSL_VERIFYHOST off.");
+
+# Block moving uploaded files with .php or .ht extensions
 sp.disable_function.function("move_uploaded_file").param("new_path").value_r("\\.ph").drop();
 sp.disable_function.function("move_uploaded_file").param("new_path").value_r("\\.ht").drop();
 
-sp.disable_function.function("ini_set").param("varname").value_r("error_log").drop()
-sp.disable_function.function("ini_set").param("varname").value_r("error_reporting").drop()
-sp.disable_function.function("ini_set").param("varname").value_r("display_errors").drop()
+# Block ini_set calls that modify error logging and reporting settings
+sp.disable_function.function("ini_set").param("varname").value_r("error_log").drop();
+sp.disable_function.function("ini_set").param("varname").value_r("error_reporting").drop();
+sp.disable_function.function("ini_set").param("varname").value_r("display_errors").drop();
