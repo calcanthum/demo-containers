@@ -1,13 +1,20 @@
-FROM php:8.2-apache
+FROM debian:latest
 
 RUN apt-get update && apt-get install -y \
-    libonig-dev \
-    libxml2-dev \
-    git
-    
-RUN docker-php-ext-install mbstring pdo pdo_mysql mysqli
+    apache2 \
+    php8.2 \
+    php8.2-cli \
+    php8.2-mbstring \
+    php8.2-mysql \
+    php8.2-xml \
+    libapache2-mod-php8.2 \
+    git \
+    php-dev \
+    php-pear \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN a2enmod rewrite
+RUN a2enmod rewrite headers
 
 RUN git clone https://github.com/jvoisin/snuffleupagus.git /usr/src/snuffleupagus \
     && cd /usr/src/snuffleupagus/src \
@@ -15,10 +22,19 @@ RUN git clone https://github.com/jvoisin/snuffleupagus.git /usr/src/snuffleupagu
     && ./configure \
     && make \
     && make install
-    
-RUN echo "extension=snuffleupagus.so" > /usr/local/etc/php/conf.d/20-snuffleupagus.ini \
-    && echo "sp.configuration_file=/usr/local/etc/php/conf.d/snuffleupagus.rules" >> /usr/local/etc/php/conf.d/20-snuffleupagus.ini
 
-COPY snuffleupagus.rules /usr/local/etc/php/conf.d/snuffleupagus.rules
+RUN echo "extension=snuffleupagus.so" > /etc/php/8.2/cli/conf.d/20-snuffleupagus.ini \
+    && echo "extension=snuffleupagus.so" > /etc/php/8.2/apache2/conf.d/20-snuffleupagus.ini \
+    && echo "sp.configuration_file=/etc/php/8.2/apache2/conf.d/snuffleupagus.rules" >> /etc/php/8.2/apache2/conf.d/20-snuffleupagus.ini
 
-RUN chown -R www-data:www-data /var/www/html/
+COPY snuffleupagus.rules /etc/php/8.2/apache2/conf.d/snuffleupagus.rules
+COPY apache-security.conf /etc/apache2/conf-available/apache-security.conf
+COPY custom-php.ini /etc/php/8.2/apache2/conf.d/
+
+RUN a2enconf apache-security
+
+RUN chown -R www-data:www-data /var/www/html
+
+EXPOSE 80
+
+CMD ["apache2ctl", "-D", "FOREGROUND"]
